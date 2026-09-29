@@ -3,20 +3,14 @@ const {
 } = require("discord.js");
 
 const command = new SlashCommandBuilder()
-    .setName("giveaway-reroll")
-    .setDescription("Ersetzt einen Gewinner eines Giveaways.")
+    .setName("reroll")
+    .setDescription("Lost einen neuen Gewinner für ein Giveaway aus.")
     .addIntegerOption(option =>
         option
-            .setName("giveaway")
+            .setName("id")
             .setDescription("Die ID des Giveaways.")
             .setRequired(true)
             .setMinValue(1)
-    )
-    .addUserOption(option =>
-        option
-            .setName("winner")
-            .setDescription("Der Gewinner, der ersetzt werden soll.")
-            .setRequired(true)
     );
 
 module.exports = {

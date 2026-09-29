@@ -144,7 +144,7 @@ async function handleInteraction(interaction) {
 
         if (
     interaction.isChatInputCommand() &&
-    interaction.commandName === "giveaway-reroll"
+    interaction.commandName === "reroll"
 ) {
     if (!interaction.inGuild()) {
         return interaction.reply({
@@ -154,6 +154,9 @@ async function handleInteraction(interaction) {
         });
     }
 
+    /*
+     * Rolle überprüfen
+     */
     const hasRole =
         interaction.member.roles.cache.has(
             REQUIRED_ROLE_ID
@@ -167,15 +170,11 @@ async function handleInteraction(interaction) {
         });
     }
 
+    /*
+     * Giveaway-ID auslesen
+     */
     const giveawayId =
-        interaction.options.getInteger(
-            "giveaway"
-        );
-
-    const oldWinner =
-        interaction.options.getUser(
-            "winner"
-        );
+        interaction.options.getInteger("id");
 
     await interaction.deferReply({
         flags: MessageFlags.Ephemeral
@@ -184,36 +183,55 @@ async function handleInteraction(interaction) {
     try {
         const result =
             await rerollWinner(
-                interaction,
-                giveawayId,
-                oldWinner.id
+                giveawayId
             );
 
+        /*
+         * Alte Gewinner
+         */
+        const oldWinners =
+            result.oldWinners
+                .map(
+                    userId => `<@${userId}>`
+                )
+                .join(", ");
+
+        /*
+         * Neue Gewinner
+         */
+        const newWinners =
+            result.newWinners
+                .map(
+                    userId => `<@${userId}>`
+                )
+                .join(", ");
+
+        /*
+         * Private Antwort
+         */
         await interaction.editReply({
             content:
                 `✅ Giveaway **#${giveawayId}** wurde gererolled.\n\n` +
-                `❌ Alter Gewinner: <@${result.oldWinnerId}>\n` +
-                `🎉 Neuer Gewinner: <@${result.newWinner}>`
+                `❌ Alter Gewinner: ${oldWinners}\n` +
+                `🎉 Neuer Gewinner: ${newWinners}`
         });
 
         /*
-         * Öffentliche Bekanntgabe
+         * Öffentliche Nachricht
          */
-        const channel =
-            interaction.channel;
-
-        if (channel) {
-            await channel.send({
-                content:
-                    `🔄 **Giveaway #${giveawayId} wurde gererolled!**\n\n` +
-                    `❌ <@${result.oldWinnerId}> wurde ersetzt.\n` +
-                    `🎉 Neuer Gewinner: <@${result.newWinner}>\n\n` +
-                    `🎁 Gewinn: **${result.giveaway.prize}**`
-            });
-        }
+        await interaction.channel.send({
+            content:
+                `🔄 **Giveaway #${giveawayId} wurde gererolled!**\n\n` +
+                `❌ Alter Gewinner: ${oldWinners}\n` +
+                `🎉 Neuer Gewinner: ${newWinners}\n\n` +
+                `🎁 Gewinn: **${result.giveaway.prize}**`
+        });
 
     } catch (error) {
-        console.error(error);
+        console.error(
+            `Fehler beim Reroll von Giveaway #${giveawayId}:`,
+            error
+        );
 
         await interaction.editReply({
             content:
@@ -223,6 +241,7 @@ async function handleInteraction(interaction) {
 
     return;
 }
+
 
 
     } catch (error) {

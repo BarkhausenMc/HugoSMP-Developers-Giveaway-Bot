@@ -336,9 +336,7 @@ async function checkGiveaways(client) {
 }
 
 async function rerollWinner(
-    interaction,
-    giveawayId,
-    oldWinnerId
+    giveawayId
 ) {
     const giveaway =
         giveaways.getGiveaway(giveawayId);
@@ -355,54 +353,52 @@ async function rerollWinner(
         );
     }
 
-    const isWinner =
-        giveaways.isCurrentWinner(
-            giveawayId,
-            oldWinnerId
-        );
+    /*
+     * Aktuelle Gewinner holen
+     */
+    const currentWinners =
+        giveaways.getWinners(giveawayId);
 
-    if (!isWinner) {
+    if (currentWinners.length === 0) {
         throw new Error(
-            `<@${oldWinnerId}> ist kein aktueller Gewinner von Giveaway #${giveawayId}.`
+            `Giveaway #${giveawayId} hat keinen aktuellen Gewinner.`
         );
     }
 
-    const allParticipants =
+    /*
+     * Alle Teilnehmer holen
+     */
+    const participants =
         giveaways.getParticipants(
             giveawayId
         );
 
     const participantIds =
-        allParticipants.map(
+        participants.map(
             participant => participant.user_id
         );
 
     /*
-     * Alle aktuellen Gewinner holen.
+     * Alle bisherigen Gewinner werden
+     * von der neuen Auswahl ausgeschlossen.
      *
-     * Diese werden aus der neuen Auswahl ausgeschlossen.
+     * Dadurch kann ein alter Gewinner
+     * nicht erneut gewinnen.
      */
-    const currentWinners =
-        giveaways.getWinners(giveawayId);
-
-    const currentWinnerIds =
-        currentWinners.map(
-            winner => winner.user_id
+    const allWinners =
+        giveaways.getAllWinners(
+            giveawayId
         );
 
-    /*
-     * Der alte Gewinner wird ebenfalls ausgeschlossen.
-     *
-     * Dadurch kann er nicht direkt wieder gewinnen.
-     */
-    const excludedIds = new Set([
-        ...currentWinnerIds,
-        oldWinnerId
-    ]);
+    const excludedIds = new Set(
+        allWinners.map(
+            winner => winner.user_id
+        )
+    );
 
     /*
-     * Nur Teilnehmer, die momentan kein Gewinner sind,
-     * dürfen den neuen Platz bekommen.
+     * Nur Teilnehmer, die noch nie
+     * Gewinner waren, dürfen gewinnen.
      */
     const possibleNewWinners =
         participantIds.filter(
@@ -411,43 +407,70 @@ async function rerollWinner(
 
     if (possibleNewWinners.length === 0) {
         throw new Error(
-            "Es gibt keinen weiteren Teilnehmer, der diesen Gewinner ersetzen kann."
+            "Es gibt keinen Teilnehmer mehr, der noch nicht Gewinner war."
         );
     }
 
     /*
-     * Einen neuen Gewinner auswählen.
+     * Wir ersetzen jeden aktuellen Gewinner.
+     *
+     * Bei winner_count = 1 gibt es hier
+     * natürlich genau einen Gewinner.
      */
-    const newWinner =
-        possibleNewWinners[
-            Math.floor(
-                Math.random() *
-                possibleNewWinners.length
-            )
-        ];
+    const rerolledWinners = [];
 
-    /*
-     * Alten Gewinner markieren.
-     */
-    giveaways.markWinnerAsRerolled(
-        giveawayId,
-        oldWinnerId
-    );
+    for (const oldWinner of currentWinners) {
+        /*
+         * Noch verfügbare Kandidaten.
+         */
+        const available =
+            possibleNewWinners.filter(
+                userId =>
+                    !rerolledWinners.includes(userId)
+            );
 
-    /*
-     * Neuen Gewinner speichern.
-     */
-    giveaways.addWinner(
-        giveawayId,
-        newWinner
-    );
+        if (available.length === 0) {
+            break;
+        }
+
+        const newWinner =
+            available[
+                Math.floor(
+                    Math.random() *
+                    available.length
+                )
+            ];
+
+        /*
+         * Alten Gewinner markieren
+         */
+        giveaways.markWinnerAsRerolled(
+            giveawayId,
+            oldWinner.user_id
+        );
+
+        /*
+         * Neuen Gewinner speichern
+         */
+        giveaways.addWinner(
+            giveawayId,
+            newWinner
+        );
+
+        rerolledWinners.push(
+            newWinner
+        );
+    }
 
     return {
         giveaway,
-        oldWinnerId,
-        newWinner
+        oldWinners: currentWinners.map(
+            winner => winner.user_id
+        ),
+        newWinners: rerolledWinners
     };
 }
+
 
 
 module.exports = {
@@ -457,4 +480,5 @@ module.exports = {
     endGiveaway,
     rerollWinner
 };
+
 

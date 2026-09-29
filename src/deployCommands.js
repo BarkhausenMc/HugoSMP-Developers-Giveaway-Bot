@@ -6,8 +6,13 @@ const {
 } = require("discord.js");
 
 const {
-    command
+    command: createGiveawayCommand
 } = require("./commands/createGiveaway");
+
+const {
+    command: giveawayRerollCommand
+} = require("./commands/giveawayReroll");
+
 
 const rest = new REST({
     version: "10"
@@ -28,8 +33,10 @@ async function deployCommands() {
             ),
             {
                 body: [
-                    command.toJSON()
+                    createGiveawayCommand.toJSON(),
+                    giveawayRerollCommand.toJSON()
                 ]
+
             }
         );
 

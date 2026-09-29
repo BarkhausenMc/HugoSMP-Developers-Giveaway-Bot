@@ -335,9 +335,126 @@ async function checkGiveaways(client) {
     }
 }
 
+async function rerollWinner(
+    interaction,
+    giveawayId,
+    oldWinnerId
+) {
+    const giveaway =
+        giveaways.getGiveaway(giveawayId);
+
+    if (!giveaway) {
+        throw new Error(
+            `Giveaway #${giveawayId} wurde nicht gefunden.`
+        );
+    }
+
+    if (giveaway.ended !== 1) {
+        throw new Error(
+            `Giveaway #${giveawayId} ist noch nicht beendet.`
+        );
+    }
+
+    const isWinner =
+        giveaways.isCurrentWinner(
+            giveawayId,
+            oldWinnerId
+        );
+
+    if (!isWinner) {
+        throw new Error(
+            `<@${oldWinnerId}> ist kein aktueller Gewinner von Giveaway #${giveawayId}.`
+        );
+    }
+
+    const allParticipants =
+        giveaways.getParticipants(
+            giveawayId
+        );
+
+    const participantIds =
+        allParticipants.map(
+            participant => participant.user_id
+        );
+
+    /*
+     * Alle aktuellen Gewinner holen.
+     *
+     * Diese werden aus der neuen Auswahl ausgeschlossen.
+     */
+    const currentWinners =
+        giveaways.getWinners(giveawayId);
+
+    const currentWinnerIds =
+        currentWinners.map(
+            winner => winner.user_id
+        );
+
+    /*
+     * Der alte Gewinner wird ebenfalls ausgeschlossen.
+     *
+     * Dadurch kann er nicht direkt wieder gewinnen.
+     */
+    const excludedIds = new Set([
+        ...currentWinnerIds,
+        oldWinnerId
+    ]);
+
+    /*
+     * Nur Teilnehmer, die momentan kein Gewinner sind,
+     * dürfen den neuen Platz bekommen.
+     */
+    const possibleNewWinners =
+        participantIds.filter(
+            userId => !excludedIds.has(userId)
+        );
+
+    if (possibleNewWinners.length === 0) {
+        throw new Error(
+            "Es gibt keinen weiteren Teilnehmer, der diesen Gewinner ersetzen kann."
+        );
+    }
+
+    /*
+     * Einen neuen Gewinner auswählen.
+     */
+    const newWinner =
+        possibleNewWinners[
+            Math.floor(
+                Math.random() *
+                possibleNewWinners.length
+            )
+        ];
+
+    /*
+     * Alten Gewinner markieren.
+     */
+    giveaways.markWinnerAsRerolled(
+        giveawayId,
+        oldWinnerId
+    );
+
+    /*
+     * Neuen Gewinner speichern.
+     */
+    giveaways.addWinner(
+        giveawayId,
+        newWinner
+    );
+
+    return {
+        giveaway,
+        oldWinnerId,
+        newWinner
+    };
+}
+
+
 module.exports = {
     createGiveawayFromModal,
     joinGiveaway,
     checkGiveaways,
-    endGiveaway
+    endGiveaway,
+    rerollWinner
 };
+

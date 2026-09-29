@@ -137,6 +137,94 @@ function isEnded(giveawayId) {
     return giveaway.ended === 1;
 }
 
+/**
+ * Speichert einen Gewinner.
+ */
+function addWinner(giveawayId, userId) {
+    db.prepare(`
+        INSERT OR REPLACE INTO winners (
+            giveaway_id,
+            user_id,
+            rerolled,
+            won_at
+        )
+        VALUES (?, ?, 0, ?)
+    `).run(
+        giveawayId,
+        userId,
+        Date.now()
+    );
+}
+
+
+/**
+ * Gibt die aktuellen Gewinner zurück.
+ */
+function getWinners(giveawayId) {
+    return db.prepare(`
+        SELECT *
+        FROM winners
+        WHERE giveaway_id = ?
+        AND rerolled = 0
+    `).all(giveawayId);
+}
+
+
+/**
+ * Gibt alle bisherigen Gewinner zurück,
+ * inklusive gererollter Gewinner.
+ */
+function getAllWinners(giveawayId) {
+    return db.prepare(`
+        SELECT *
+        FROM winners
+        WHERE giveaway_id = ?
+        ORDER BY won_at ASC
+    `).all(giveawayId);
+}
+
+
+/**
+ * Markiert einen Gewinner als gererolled.
+ */
+function markWinnerAsRerolled(
+    giveawayId,
+    userId
+) {
+    db.prepare(`
+        UPDATE winners
+        SET rerolled = 1
+        WHERE giveaway_id = ?
+        AND user_id = ?
+        AND rerolled = 0
+    `).run(
+        giveawayId,
+        userId
+    );
+}
+
+
+/**
+ * Prüft, ob ein User aktueller Gewinner ist.
+ */
+function isCurrentWinner(
+    giveawayId,
+    userId
+) {
+    const winner = db.prepare(`
+        SELECT *
+        FROM winners
+        WHERE giveaway_id = ?
+        AND user_id = ?
+        AND rerolled = 0
+    `).get(
+        giveawayId,
+        userId
+    );
+
+    return !!winner;
+}
+
 module.exports = {
     createGiveaway,
     getGiveaway,
@@ -146,5 +234,12 @@ module.exports = {
     getParticipantCount,
     getParticipants,
     finishGiveaway,
-    isEnded
+    isEnded,
+
+    addWinner,
+    getWinners,
+    getAllWinners,
+    markWinnerAsRerolled,
+    isCurrentWinner
 };
+

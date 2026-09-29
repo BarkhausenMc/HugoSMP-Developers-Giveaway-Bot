@@ -53,6 +53,19 @@ db.exec(`
 
     CREATE INDEX IF NOT EXISTS idx_participants_giveaway
         ON participants(giveaway_id);
+
+        CREATE TABLE IF NOT EXISTS winners (
+        giveaway_id INTEGER NOT NULL,
+        user_id TEXT NOT NULL,
+        rerolled INTEGER NOT NULL DEFAULT 0,
+        won_at INTEGER NOT NULL,
+
+        PRIMARY KEY (giveaway_id, user_id),
+
+        FOREIGN KEY (giveaway_id)
+            REFERENCES giveaways(id)
+            ON DELETE CASCADE
+    );
 `);
 
 module.exports = db;

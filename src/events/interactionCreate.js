@@ -8,8 +8,10 @@ const {
 
 const {
     createGiveawayFromModal,
-    joinGiveaway
+    joinGiveaway,
+    rerollWinner
 } = require("../giveaways/giveawayManager");
+
 
 const REQUIRED_ROLE_ID =
     process.env.GIVEAWAY_ROLE_ID;
@@ -139,6 +141,90 @@ async function handleInteraction(interaction) {
                 giveawayId
             );
         }
+
+        if (
+    interaction.isChatInputCommand() &&
+    interaction.commandName === "giveaway-reroll"
+) {
+    if (!interaction.inGuild()) {
+        return interaction.reply({
+            content:
+                "❌ Dieser Command kann nur auf einem Server verwendet werden.",
+            flags: MessageFlags.Ephemeral
+        });
+    }
+
+    const hasRole =
+        interaction.member.roles.cache.has(
+            REQUIRED_ROLE_ID
+        );
+
+    if (!hasRole) {
+        return interaction.reply({
+            content:
+                "❌ Du hast keine Berechtigung, Giveaways zu rerollen.",
+            flags: MessageFlags.Ephemeral
+        });
+    }
+
+    const giveawayId =
+        interaction.options.getInteger(
+            "giveaway"
+        );
+
+    const oldWinner =
+        interaction.options.getUser(
+            "winner"
+        );
+
+    await interaction.deferReply({
+        flags: MessageFlags.Ephemeral
+    });
+
+    try {
+        const result =
+            await rerollWinner(
+                interaction,
+                giveawayId,
+                oldWinner.id
+            );
+
+        await interaction.editReply({
+            content:
+                `✅ Giveaway **#${giveawayId}** wurde gererolled.\n\n` +
+                `❌ Alter Gewinner: <@${result.oldWinnerId}>\n` +
+                `🎉 Neuer Gewinner: <@${result.newWinner}>`
+        });
+
+        /*
+         * Öffentliche Bekanntgabe
+         */
+        const channel =
+            interaction.channel;
+
+        if (channel) {
+            await channel.send({
+                content:
+                    `🔄 **Giveaway #${giveawayId} wurde gererolled!**\n\n` +
+                    `❌ <@${result.oldWinnerId}> wurde ersetzt.\n` +
+                    `🎉 Neuer Gewinner: <@${result.newWinner}>\n\n` +
+                    `🎁 Gewinn: **${result.giveaway.prize}**`
+            });
+        }
+
+    } catch (error) {
+        console.error(error);
+
+        await interaction.editReply({
+            content:
+                `❌ ${error.message}`
+        });
+    }
+
+    return;
+}
+
+
     } catch (error) {
         console.error(
             "Fehler bei einer Interaction:",

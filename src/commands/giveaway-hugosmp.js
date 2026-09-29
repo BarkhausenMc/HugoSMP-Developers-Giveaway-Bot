@@ -1,15 +1,9 @@
-const { 
-    SlashCommandBuilder, 
-    ModalBuilder, 
-    TextInputBuilder, 
-    TextInputStyle, 
-    ActionRowBuilder 
-} = require('discord.js');
+const { SlashCommandBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = require('discord.js');
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('hugosmp')
-        .setDescription('Erstelle ein HugoSMP Money Giveaway über ein Modal'),
+        .setDescription('Erstelle ein HugoSMP Money Giveaway'),
     
     async execute(interaction) {
         if (!interaction.member.permissions.has('ManageMessages')) {
@@ -21,7 +15,7 @@ module.exports = {
         
         const modal = new ModalBuilder()
             .setCustomId('hugosmp_create_modal')
-            .setTitle('HugoSMP Money Giveaway erstellen');
+            .setTitle('HugoSMP Money Giveaway');
         
         const timeInput = new TextInputBuilder()
             .setCustomId('time_input')
@@ -32,7 +26,7 @@ module.exports = {
         
         const winnerInput = new TextInputBuilder()
             .setCustomId('winner_input')
-            .setLabel('Anzahl Gewinner')
+            .setLabel('Anzahl Gewinner (1-100)')
             .setStyle(TextInputStyle.Short)
             .setPlaceholder('5')
             .setRequired(true);
@@ -53,9 +47,9 @@ module.exports = {
         
         const descInput = new TextInputBuilder()
             .setCustomId('description_input')
-            .setLabel('Beschreibung/Regeln (optional)')
+            .setLabel('Beschreibung (optional)')
             .setStyle(TextInputStyle.Paragraph)
-            .setPlaceholder('Zusätzliche Bedingungen...')
+            .setPlaceholder('Regeln...')
             .setRequired(false);
         
         modal.addComponents(

@@ -1,15 +1,9 @@
-const { 
-    SlashCommandBuilder, 
-    ModalBuilder, 
-    TextInputBuilder, 
-    TextInputStyle, 
-    ActionRowBuilder 
-} = require('discord.js');
+const { SlashCommandBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = require('discord.js');
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('create')
-        .setDescription('Erstelle ein normales Giveaway über ein Modal'),
+        .setDescription('Erstelle ein normales Giveaway'),
     
     async execute(interaction) {
         if (!interaction.member.permissions.has('ManageMessages')) {
@@ -23,31 +17,27 @@ module.exports = {
             .setCustomId('giveaway_create_modal')
             .setTitle('Neues Giveaway erstellen');
         
-        // Time Input
         const timeInput = new TextInputBuilder()
             .setCustomId('time_input')
-            .setLabel('Dauer (z.B. 1h, 30m, 2d, 90s)')
+            .setLabel('Dauer (z.B. 1h, 30m, 2d)')
             .setStyle(TextInputStyle.Short)
             .setPlaceholder('1h')
             .setRequired(true);
         
-        // Winner Count Input
         const winnerInput = new TextInputBuilder()
             .setCustomId('winner_input')
-            .setLabel('Anzahl Gewinner')
+            .setLabel('Anzahl Gewinner (1-100)')
             .setStyle(TextInputStyle.Short)
             .setPlaceholder('3')
             .setRequired(true);
         
-        // Prize Input
         const prizeInput = new TextInputBuilder()
             .setCustomId('prize_input')
             .setLabel('Preisbeschreibung')
             .setStyle(TextInputStyle.Short)
-            .setPlaceholder('Gamepass, VIP-Rang, etc.')
+            .setPlaceholder('Gamepass, VIP-Rang')
             .setRequired(true);
         
-        // Title Input (optional)
         const titleInput = new TextInputBuilder()
             .setCustomId('title_input')
             .setLabel('Titel (optional)')
@@ -55,12 +45,11 @@ module.exports = {
             .setPlaceholder('🎁 Super Giveaway')
             .setRequired(false);
         
-        // Description Input (optional)
         const descInput = new TextInputBuilder()
             .setCustomId('description_input')
-            .setLabel('Beschreibung/Regeln (optional)')
+            .setLabel('Beschreibung (optional)')
             .setStyle(TextInputStyle.Paragraph)
-            .setPlaceholder('Zusätzliche Teilnahmebedingungen...')
+            .setPlaceholder('Regeln...')
             .setRequired(false);
         
         modal.addComponents(

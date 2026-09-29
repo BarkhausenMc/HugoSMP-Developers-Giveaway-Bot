@@ -32,5 +32,4 @@ client.once('ready', async () => {
 client.on('interactionCreate', interactionCreate);
 global.client = client;
 
-
 client.login(process.env.DISCORD_TOKEN);

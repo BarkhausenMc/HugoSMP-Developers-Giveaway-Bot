@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
-const { v4: uuidv4 } = require('uuid');
+const crypto = require('crypto');
 const { stmts } = require('../database');
 const { parseTime, scheduleGiveawayEnd } = require('../utils/helpers');
 
@@ -49,7 +49,7 @@ module.exports = {
             const totalAmount = amount * winnerCount;
             
             const endTime = parseTime(timeStr);
-            const giveawayId = uuidv4().slice(0, 8);
+            const giveawayId = crypto.randomUUID().slice(0, 8);
             
             const embed = new EmbedBuilder()
                 .setTitle(title)

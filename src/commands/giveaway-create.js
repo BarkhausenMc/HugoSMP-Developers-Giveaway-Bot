@@ -1,11 +1,7 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
-const { v4: uuidv4 } = require('uuid');
+const crypto = require('crypto');
 const { stmts } = require('../database');
 const { parseTime, scheduleGiveawayEnd } = require('../utils/helpers');
-const config = require('../config');
-
-// uuid package installieren: npm install uuid
-require('uuid');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -46,7 +42,6 @@ module.exports = {
     
     async execute(interaction) {
         try {
-            // Berechtigungen prüfen
             if (!interaction.member.permissions.has('ManageMessages')) {
                 return interaction.reply({ 
                     content: '❌ Du brauchst `Manage Messages` Permission!', 
@@ -60,11 +55,9 @@ module.exports = {
             const title = interaction.options.getString('title') || '🎁 Giveaway';
             const description = interaction.options.getString('description') || '';
             
-            // Zeit parsen
             const endTime = parseTime(timeStr);
-            const giveawayId = uuidv4().slice(0, 8);
+            const giveawayId = crypto.randomUUID().slice(0, 8);
             
-            // Embed erstellen
             const embed = new EmbedBuilder()
                 .setTitle(title)
                 .setDescription(description)
@@ -78,7 +71,6 @@ module.exports = {
                 .setFooter({ text: 'Reagiere mit 🎉 um teilzunehmen!' })
                 .setTimestamp(new Date(endTime));
             
-            // Button Row
             const row = new ActionRowBuilder()
                 .addComponents(
                     new ButtonBuilder()
@@ -88,13 +80,11 @@ module.exports = {
                         .setStyle(ButtonStyle.Primary)
                 );
             
-            // Nachricht senden
             const msg = await interaction.channel.send({ 
                 embeds: [embed], 
                 components: [row] 
             });
             
-            // In DB speichern
             stmts.insert.run(
                 giveawayId,
                 msg.id,
@@ -103,19 +93,17 @@ module.exports = {
                 prize,
                 title,
                 description,
-                0, // hugosmp_amount
+                0,
                 Date.now(),
                 endTime,
                 winnerCount,
                 interaction.user.id,
-                '[]', // participants
-                '[]'  // winners
+                '[]',
+                '[]'
             );
             
-            // Timer starten
             scheduleGiveawayEnd(interaction.client, giveawayId, endTime);
             
-            // Antwort an Commander
             await interaction.reply({ 
                 content: `✅ **Giveaway erstellt!**\n\n**ID:** \`${giveawayId}\`\n**Ende:** <t:${Math.floor(endTime/1000)}:R>`,
                 ephemeral: true 

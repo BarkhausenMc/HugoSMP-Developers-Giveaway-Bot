@@ -3,7 +3,7 @@ const path = require('path');
 
 const db = new Database(path.join(__dirname, '..', 'giveaways.db'));
 
-// Tabelle erstellen
+// Tabelle erstellen (alle Spalten mit korrekten DEFAULT-Werten)
 db.exec(`
   CREATE TABLE IF NOT EXISTS giveaways (
     id TEXT PRIMARY KEY,
@@ -21,7 +21,7 @@ db.exec(`
     created_by BIGINT,
     participants TEXT DEFAULT '[]',
     winners TEXT DEFAULT '[]',
-    created_at INTEGER DEFAULT (strftime('%s', 'now'))
+    created_at INTEGER DEFAULT (strftime('%s', 'now') * 1000)
   );
   
   CREATE INDEX IF NOT EXISTS idx_end_time ON giveaways(end_time);
@@ -29,13 +29,14 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_guild ON giveaways(guild_id);
 `);
 
-// Helper-Funktionen
+// Helper-Funktionen mit KOREKTEN Parametern
 const stmts = {
     insert: db.prepare(`
         INSERT INTO giveaways (
             id, message_id, channel_id, guild_id, prize, title, description,
-            hugosmp_amount, start_time, end_time, winner_count, created_by, participants, winners
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            hugosmp_amount, start_time, end_time, winner_count, created_by, 
+            participants, winners
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `),
     
     getById: db.prepare('SELECT * FROM giveaways WHERE id = ?'),

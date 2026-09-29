@@ -1,19 +1,12 @@
 {
-  "name": "giveaway-bot",
+  "name": "hugosmp-developers-giveaway-bot",
   "version": "1.0.0",
-  "description": "Discord Giveaway Bot for HugoSMP",
-  "main": "src/index.js",
+  "main": "index.js",
   "scripts": {
-    "start": "node src/index.js",
-    "dev": "nodemon src/index.js"
+    "start": "node index.js"
   },
   "dependencies": {
     "discord.js": "^14.14.1",
-    "dotenv": "^16.3.1",
-    "better-sqlite3": "^9.2.2",
-    "cron": "^3.1.6"
-  },
-  "devDependencies": {
-    "nodemon": "^3.0.2"
+    "dotenv": "^16.3.1"
   }
 }

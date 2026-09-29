@@ -6,7 +6,6 @@ const { endGiveaway } = require('./utils/helpers');
 const { db } = require('./database');
 const config = require('./config');
 
-// Client Initialisierung
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
@@ -18,7 +17,7 @@ const client = new Client({
     partials: [Partials.Message, Partials.Channel, Partials.Reaction]
 });
 
-// Laufzeit-Giveaways laden (falls Bot neu gestartet wird)
+// Laufzeit-Giveaways laden
 function loadScheduledGiveaways() {
     const { stmts } = require('./database');
     const active = stmts.getAllActive.all();
@@ -28,9 +27,7 @@ function loadScheduledGiveaways() {
         if (giveaway.end_time > now) {
             const { scheduleGiveawayEnd } = require('./utils/helpers');
             scheduleGiveawayEnd(client, giveaway.id, giveaway.end_time);
-            console.log(`⏰ Geplanter Giveaway ${giveaway.id} geladen (endet: ${new Date(giveaway.end_time).toLocaleString()})`);
         } else {
-            // Verpasstes Ende? Manuelles Trigger
             setTimeout(() => endGiveaway(client, giveaway.id), 1000);
         }
     });
@@ -52,79 +49,82 @@ commandFiles.forEach(file => {
 });
 
 // Events laden
-const eventFiles = fs.readdirSync(path.join(__dirname, 'events')).filter(f => f.endsWith('.js'));
-eventFiles.forEach(file => {
-    const event = require(path.join(__dirname, 'events', file));
-    if (event.once) {
-        client.once(event.name, (...args) => event.execute(...args, client));
-    } else {
-        client.on(event.name, (...args) => event.execute(...args, client));
-    }
+const eventPath = path.join(__dirname, 'events');
+fs.readdir(eventPath, (err, files) => {
+    files.forEach(file => {
+        const event = require(path.join(eventPath, file));
+        if (event.once) {
+            client.once(event.name, (...args) => event.execute(...args, client));
+        } else {
+            client.on(event.name, (...args) => event.execute(...args, client));
+        }
+    });
 });
 
-// Ready Event
+// KORREKTUR: clientReady statt ready!
 client.once(Events.ClientReady, async () => {
     console.log('\n========================================');
     console.log(`🤖 ${client.user.tag} ist online!`);
     console.log(`📡 ID: ${client.user.id}`);
     console.log(`💜 Server: ${client.guilds.cache.size}`);
-    console.log(`========================================\n`);
+    console.log('========================================\n');
     
-    // Bot Status setzen
     client.user.setPresence({
         activities: [{ name: '/giveaway help', type: ActivityType.Playing }],
         status: 'online'
     });
     
-    // Slash Commands registrieren
     if (commands.length > 0) {
         try {
             console.log(`🔄 Registriere ${commands.length} Slash Commands...`);
-            
-            // Globale Registrierung
             await client.application.commands.set(commands);
             console.log('✅ Globale Commands registriert');
             
-            // Optional: Auch in jeder Guild registrieren (für schnelleres Testing)
             client.guilds.cache.forEach(guild => {
                 guild.commands.set(commands).catch(() => {});
             });
-            
         } catch (error) {
             console.error('❌ Fehler beim Registrieren:', error);
         }
     }
     
-    // Ausstehende Giveaways laden
     loadScheduledGiveaways();
 });
 
-// Button Interaction Handler
+// Button & Modal Handler direkt hier (vermeidet doppelte Event-Registerierung)
 client.on(Events.InteractionCreate, async interaction => {
+    // Modal Submissions
+    if (interaction.isModalSubmit()) {
+        if (interaction.customId === 'giveaway_create_modal') {
+            const { handleNormalGiveaway } = require('./events/modal-handler.js');
+            await handleNormalGiveaway(interaction, client);
+        }
+        
+        if (interaction.customId === 'hugosmp_create_modal') {
+            const { handleHugosmpGiveaway } = require('./events/modal-handler.js');
+            await handleHugosmpGiveaway(interaction, client);
+        }
+    }
+    
+    // Button Clicks
     if (!interaction.isButton()) return;
     
     if (interaction.customId.startsWith('giveaway_join_')) {
         const giveawayId = interaction.customId.replace('giveaway_join_', '');
-        
-        if (!interaction.inCachedGuild()) {
-            return interaction.reply({ content: '❌ Dies funktioniert nur in einer Guild!', ephemeral: true });
-        }
-        
         const { stmts } = require('./database');
         const giveaway = stmts.getById.get(giveawayId);
         
         if (!giveaway || giveaway.status !== 'active') {
-            return interaction.reply({ content: '❌ Dieses Giveaway existiert nicht oder ist beendet!', ephemeral: true });
+            return interaction.reply({ content: '❌ Giveaway existiert nicht oder ist beendet!', ephemeral: true });
         }
         
         let participants = JSON.parse(giveaway.participants || '[]');
         
         if (participants.includes(interaction.user.id)) {
-            return interaction.reply({ content: 'ℹ️ Du hast bereits teilgenommen!', ephemeral: true });
+            return interaction.reply({ content: 'ℹ️ Bereits teilgenommen!', ephemeral: true });
         }
         
         participants.push(interaction.user.id);
-        
         stmts.updateParticipants.run(JSON.stringify(participants), giveawayId);
         
         await interaction.deferUpdate();
@@ -134,7 +134,6 @@ client.on(Events.InteractionCreate, async interaction => {
         });
     }
     
-    // Ergebnis Button (für abgelaufene Giveaways)
     if (interaction.customId.startsWith('giveaway_result_')) {
         const giveawayId = interaction.customId.replace('giveaway_result_', '');
         const { stmts } = require('./database');
@@ -154,7 +153,6 @@ client.on(Events.InteractionCreate, async interaction => {
     }
 });
 
-// Fehlerbehandlung
 process.on('unhandledRejection', error => {
     console.error('⚠️ Unhandled Promise Rejection:', error);
 });
@@ -164,7 +162,6 @@ process.on('uncaughtException', error => {
     process.exit(1);
 });
 
-// Login
 if (!config.token) {
     console.error('❌ DISCORD_TOKEN fehlt in .env!');
     process.exit(1);

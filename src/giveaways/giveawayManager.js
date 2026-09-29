@@ -203,12 +203,14 @@ async function updateGiveawayMessage(client, giveawayId, disabled = false) {
  * Beendet ein Giveaway.
  */
 async function endGiveaway(client, giveaway) {
-    // Noch einmal prüfen, damit kein Giveaway
-    // versehentlich doppelt verarbeitet wird.
     const currentGiveaway =
         giveaways.getGiveaway(giveaway.id);
 
-    if (!currentGiveaway || currentGiveaway.ended === 1) {
+    if (!currentGiveaway) {
+        return;
+    }
+
+    if (currentGiveaway.ended === 1) {
         return;
     }
 
@@ -217,10 +219,14 @@ async function endGiveaway(client, giveaway) {
     }
 
     const participants =
-        giveaways.getParticipants(currentGiveaway.id);
+        giveaways.getParticipants(
+            currentGiveaway.id
+        );
 
     const participantIds =
-        participants.map(participant => participant.user_id);
+        participants.map(
+            participant => participant.user_id
+        );
 
     let winners = [];
 
@@ -231,16 +237,36 @@ async function endGiveaway(client, giveaway) {
         );
     }
 
-    // Erst als beendet markieren.
-    giveaways.finishGiveaway(currentGiveaway.id);
+    /*
+     * WICHTIG:
+     * Gewinner dauerhaft in der Datenbank speichern.
+     */
+    for (const winnerId of winners) {
+        giveaways.addWinner(
+            currentGiveaway.id,
+            winnerId
+        );
+    }
 
-    // Giveaway-Nachricht deaktivieren.
+    /*
+     * Giveaway als beendet markieren.
+     */
+    giveaways.finishGiveaway(
+        currentGiveaway.id
+    );
+
+    /*
+     * Giveaway-Nachricht deaktivieren.
+     */
     await updateGiveawayMessage(
         client,
         currentGiveaway.id,
         true
     );
 
+    /*
+     * Gewinner bekanntgeben.
+     */
     await announceWinners(
         client,
         currentGiveaway,
@@ -248,6 +274,7 @@ async function endGiveaway(client, giveaway) {
         participantIds.length
     );
 }
+
 
 /**
  * Zufällige Gewinner auswählen.
